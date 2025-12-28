@@ -4,11 +4,12 @@ import {
   executeSteps,
   adaptViemWallet,
   getCurrentStepData,
-  safeStructuredClone
+  safeStructuredClone,
 } from '../utils/index.js'
 import { type WalletClient } from 'viem'
 import { isViemWalletClient } from '../utils/viemWallet.js'
 import { isDeadAddress } from '../constants/address.js'
+import { createExecutionCollector } from '../utils/transactionMetrics.js'
 
 export type ExecuteActionParameters = {
   quote: Execute
@@ -70,6 +71,17 @@ export function execute(data: ExecuteActionParameters): Promise<{
     const { request, ...restOfQuote } = quote
     const _quote = safeStructuredClone(restOfQuote)
 
+    // Initialize metrics collector
+    const metricsCollector = createExecutionCollector()
+
+    // Log quote request metrics
+    metricsCollector.logQuoteRequest({
+      quote,
+      adaptedWallet,
+    })
+
+    const startTime = Date.now()
+
     // Build the promise that carries out the execution
     const executionPromise: Promise<{
       data: Execute
@@ -99,22 +111,43 @@ export function execute(data: ExecuteActionParameters): Promise<{
             currentStepItem,
             txHashes,
             refunded,
-            error
+            error,
           })
         },
         _quote,
         depositGasLimit
           ? {
               deposit: {
-                gasLimit: depositGasLimit
-              }
+                gasLimit: depositGasLimit,
+              },
             }
           : undefined
       )
-        .then((data) => {
+        .then((data: Execute) => {
+          const duration = Date.now() - startTime
+
+          // Log execution success metrics
+          metricsCollector.logExecutionSuccess({
+            quote,
+            duration,
+            steps: data.steps,
+            fees: data.fees,
+          })
+
           resolve({ data, abortController })
         })
-        .catch(reject)
+        .catch((error) => {
+          const duration = Date.now() - startTime
+
+          // Log execution error metrics
+          metricsCollector.logExecutionError({
+            quote,
+            duration,
+            error,
+          })
+
+          reject(error)
+        })
     })
 
     // Attach the AbortController to the promise itself so callers can access it immediately

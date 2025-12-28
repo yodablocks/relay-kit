@@ -4,7 +4,7 @@ import {
   executeSteps,
   adaptViemWallet,
   getCurrentStepData,
-  safeStructuredClone,
+  safeStructuredClone
 } from '../utils/index.js'
 import { type WalletClient } from 'viem'
 import { isViemWalletClient } from '../utils/viemWallet.js'
@@ -111,15 +111,15 @@ export function execute(data: ExecuteActionParameters): Promise<{
             currentStepItem,
             txHashes,
             refunded,
-            error,
+            error
           })
         },
         _quote,
         depositGasLimit
           ? {
               deposit: {
-                gasLimit: depositGasLimit,
-              },
+                gasLimit: depositGasLimit
+              }
             }
           : undefined
       )

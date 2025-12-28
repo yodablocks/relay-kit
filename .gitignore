@@ -185,4 +185,4 @@ styled-system-studio
 dist
 design-system
 !design-system/package.json
-**/src/version.ts
+**/src/version.tspackages/sdk/version.js
